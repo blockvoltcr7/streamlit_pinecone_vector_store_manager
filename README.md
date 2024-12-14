@@ -15,7 +15,7 @@ A Streamlit application for managing and querying vector stores in Pinecone usin
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/streamlit_pinecone_vector_store_manager.git
+git clone https://github.com/blockvoltcr7/streamlit_pinecone_vector_store_manager.git
 cd streamlit_pinecone_vector_store_manager
 ```
 
@@ -31,7 +31,6 @@ source venv/bin/activate
 ```
 
 3. Install required packages
-- cd into root project directory
 ```bash
 pip install -r requirements.txt
 ```
