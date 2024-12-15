@@ -89,9 +89,3 @@ streamlit run home.py
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-This project is licensed under the MIT License - see the LICENSE file for details
-```
-
-This README provides clear instructions for setting up and running the project, along with additional recommendations for better usage and maintenance. Feel free to modify it according to your specific needs or add more sections as required.
