@@ -1,6 +1,11 @@
 # Streamlit Pinecone Vector Store Manager
+Document Vector Store Manager is a Streamlit application designed to manage and interact with document vector stores using Pinecone. This tool provides a user-friendly interface for uploading, managing, and querying documents with metadata, making it easier to handle large collections of documents and retrieve relevant information efficiently.
+## Features
 
-A Streamlit application for managing and querying vector stores in Pinecone using LangChain integration.
+- Upload Documents: Easily upload documents in PDF, Text, or Markdown formats. Add metadata such as title, category, tags, and more to enhance document retrieval.
+- Manage Indexes: View and manage existing Pinecone indexes. Monitor index statistics, manage namespaces, and delete namespaces when necessary.
+- Search and Retrieve: Perform searches across your document collection using a powerful query interface. Retrieve documents based on metadata and content similarity.
+- Chat Interface: Engage with your documents through a chat interface powered by OpenAI's language models. Ask questions and receive contextually relevant answers based on your document collection.
 
 ## Getting Started
 
