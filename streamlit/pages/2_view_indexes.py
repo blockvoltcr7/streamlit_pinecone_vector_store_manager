@@ -1,11 +1,13 @@
-import streamlit as st
 from dotenv import load_dotenv
 from utils.pinecone_utils import (
+    delete_index,
     delete_namespace,
     get_active_indexes,
     get_index_stats,
     query_index,
 )
+
+import streamlit as st
 
 # Load environment variables
 load_dotenv()
@@ -45,8 +47,10 @@ def view_indexes_page():
             st.warning("No active indexes found")
             return
 
-        # Create tabs for Search and Management
-        search_tab, manage_tab = st.tabs(["Search Documents", "Manage Namespaces"])
+        # Create main tabs for Search, Namespace Management, and Index Management
+        search_tab, namespace_tab, index_tab = st.tabs(
+            ["Search Documents", "Manage Namespaces", "Manage Indexes"]
+        )
 
         with search_tab:
             # Select index and namespace
@@ -103,43 +107,19 @@ def view_indexes_page():
             except Exception as e:
                 st.error(f"Error fetching namespaces: {str(e)}")
 
-        with manage_tab:
+        with namespace_tab:
             # Namespace management
             st.subheader("Manage Namespaces")
 
             # Select index
-            selected_index = st.selectbox("Select Index", indexes, key="manage_index")
-
-            # Add a refresh button to update index stats
-            if st.button("Refresh Index Stats"):
-                # Use st.rerun() to refresh the page
-                st.rerun()
+            selected_index = st.selectbox(
+                "Select Index", indexes, key="manage_namespace_index"
+            )
 
             # Show index stats
             try:
                 stats = get_index_stats(selected_index)
-                st.write("### Index Statistics")
-
-                # Create metrics row
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric(
-                        "Total Vectors",
-                        f"{stats.total_vector_count:,}",
-                        help="Total number of vectors in the index",
-                    )
-                with col2:
-                    st.metric(
-                        "Dimension",
-                        stats.dimension,
-                        help="Vector dimension size",
-                    )
-                with col3:
-                    st.metric(
-                        "Index Fullness",
-                        f"{stats.index_fullness:.1%}",
-                        help="Percentage of index capacity used",
-                    )
+                st.write("### Namespace Statistics")
 
                 # Display namespace information
                 if stats.namespaces:
@@ -183,6 +163,81 @@ def view_indexes_page():
                 else:
                     st.info("No namespaces found in this index")
 
+                # Delete namespace
+                st.subheader("Delete Namespace")
+                namespace_to_delete = st.text_input(
+                    "Enter namespace to delete",
+                    help="Warning: This will delete all documents in the namespace",
+                )
+
+                # Changed button type from "danger" to "primary" and added warning color styling
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    confirm = st.checkbox("I understand this action cannot be undone")
+                with col2:
+                    if st.button(
+                        "Delete Namespace", type="primary", use_container_width=True
+                    ):
+                        if namespace_to_delete:
+                            if confirm:
+                                try:
+                                    delete_namespace(
+                                        selected_index, namespace_to_delete
+                                    )
+                                    st.success(
+                                        f"Namespace '{namespace_to_delete}' deleted successfully"
+                                    )
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error deleting namespace: {str(e)}")
+                            else:
+                                st.warning(
+                                    "Please confirm that you understand this action"
+                                )
+                        else:
+                            st.warning("Please enter a namespace name")
+
+            except Exception as e:
+                st.error(f"Error retrieving namespace statistics: {str(e)}")
+
+        with index_tab:
+            # Index management
+            st.subheader("Manage Indexes")
+
+            # Select index
+            selected_index = st.selectbox("Select Index", indexes, key="manage_index")
+
+            # Add a refresh button to update index stats
+            if st.button("Refresh Index Stats"):
+                # Use st.rerun() to refresh the page
+                st.rerun()
+
+            # Show index stats
+            try:
+                stats = get_index_stats(selected_index)
+                st.write("### Index Statistics")
+
+                # Create metrics row
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric(
+                        "Total Vectors",
+                        f"{stats.total_vector_count:,}",
+                        help="Total number of vectors in the index",
+                    )
+                with col2:
+                    st.metric(
+                        "Dimension",
+                        stats.dimension,
+                        help="Vector dimension size",
+                    )
+                with col3:
+                    st.metric(
+                        "Index Fullness",
+                        f"{stats.index_fullness:.1%}",
+                        help="Percentage of index capacity used",
+                    )
+
                 # Show raw stats in expander
                 with st.expander("Raw Statistics"):
                     formatted_stats = {
@@ -196,38 +251,24 @@ def view_indexes_page():
                     }
                     st.json(formatted_stats)
 
+                # Delete index
+                st.subheader("Delete Index")
+                index_to_delete = st.selectbox(
+                    "Select Index to Delete", indexes, key="delete_index"
+                )
+
+                if st.button("Delete Index", type="primary"):
+                    if index_to_delete:
+                        try:
+                            delete_index(index_to_delete)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error deleting index: {str(e)}")
+                    else:
+                        st.warning("Please select an index to delete")
+
             except Exception as e:
                 st.error(f"Error retrieving index statistics: {str(e)}")
-
-            # Delete namespace
-            st.subheader("Delete Namespace")
-            namespace_to_delete = st.text_input(
-                "Enter namespace to delete",
-                help="Warning: This will delete all documents in the namespace",
-            )
-
-            # Changed button type from "danger" to "primary" and added warning color styling
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                confirm = st.checkbox("I understand this action cannot be undone")
-            with col2:
-                if st.button(
-                    "Delete Namespace", type="primary", use_container_width=True
-                ):
-                    if namespace_to_delete:
-                        if confirm:
-                            try:
-                                delete_namespace(selected_index, namespace_to_delete)
-                                st.success(
-                                    f"Namespace '{namespace_to_delete}' deleted successfully"
-                                )
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Error deleting namespace: {str(e)}")
-                        else:
-                            st.warning("Please confirm that you understand this action")
-                    else:
-                        st.warning("Please enter a namespace name")
 
     except Exception as e:
         st.error(f"Error: {str(e)}")

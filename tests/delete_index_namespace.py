@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 from pinecone import Pinecone
@@ -56,14 +55,14 @@ def delete_by_namespace(index_name: str, namespace: str):
         print(f"Error deleting namespace: {str(e)}")
 
 
-def delete_by_metadata(index_name: str, metadata_filter: dict):
+def delete_by_metadata(index_name: str, metadata_filter: dict, namespace: str = None):
     """Delete vectors matching specific metadata criteria."""
     try:
         pc = init_pinecone()
         index = pc.Index(index_name)
 
         # Delete vectors matching filter
-        index.delete(filter=metadata_filter)
+        index.delete(filter=metadata_filter, namespace=namespace)
         print(f"Vectors matching filter {metadata_filter} have been deleted.")
 
         # Verify deletion
@@ -95,7 +94,7 @@ def delete_by_ids(index_name: str, ids: list):
 
 
 def main():
-    INDEX_NAME = "n8n"
+    INDEX_NAME = "pro-roofers"
 
     # Print initial stats
     pc = init_pinecone()
@@ -110,11 +109,11 @@ def main():
     # delete_all_vectors(INDEX_NAME)
 
     # 2. Delete by namespace
-    delete_by_namespace(INDEX_NAME, "faq")
+    # delete_by_namespace(INDEX_NAME, "faq")
 
-    # 3. Delete by metadata filter
-    # metadata_filter = {"category": "roofing"}
-    # delete_by_metadata(INDEX_NAME, metadata_filter)
+    # 3. Delete by metadata filter is not available in pinecone for starter index plan
+    # metadata_filter = {"author": "sami"}
+    # delete_by_metadata(INDEX_NAME, metadata_filter, namespace="faq")
 
     # 4. Delete specific IDs
     # vector_ids = ["doc1", "doc2"]

@@ -1,16 +1,21 @@
 import os
 from typing import Dict
 
-import streamlit as st
 from dotenv import load_dotenv
-from langchain.chains.question_answering import load_qa_chain
-from langchain.chat_models import ChatOpenAI  # Use this for chat models
+from langchain.chains import ConversationalRetrievalChain
+from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores import Pinecone
 from utils.pinecone_utils import get_active_indexes, get_index_stats
 
+import streamlit as st
+
 # Load environment variables
 load_dotenv()
+
+# Initialize memory for conversation
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 
 def init_session_state():
@@ -19,34 +24,25 @@ def init_session_state():
         st.session_state.conversation = []
 
 
-def query_vector_store(vector_store, query: str, metadata_filter: Dict = None):
-    """Query vector store and get response using LLM."""
+def query_vector_store(vector_store, query: str):
+    """Query vector store and get conversational response using LLM."""
     try:
-        # Initialize OpenAI chat model with specific parameters
+        # Initialize OpenAI chat model
         llm = ChatOpenAI(
-            temperature=0.4,  # Add some creativity 0.0 - 1.0
+            temperature=0.7,  # More conversational creativity
             openai_api_key=os.getenv("OPENAI_API_KEY"),
-            model="gpt-4o-mini",
+            model="gpt-4o",
         )
 
-        # Get relevant documents with more context
-        docs = vector_store.similarity_search(
-            query, k=5, filter=metadata_filter  # Increase number of relevant docs
+        # Setup conversational chain
+        chain = ConversationalRetrievalChain.from_llm(
+            llm=llm,
+            retriever=vector_store.as_retriever(),
+            memory=memory,  # Attach memory for conversation
+            verbose=True,
         )
-
-        if not docs:
-            return "I couldn't find any relevant information in the documents."
-
-        # Create and run QA chain with specific prompt
-        chain = load_qa_chain(llm, chain_type="stuff", verbose=True)
-
-        # Add context to the question
-        context_query = (
-            "Based on the provided documents, " f"please answer this question: {query}"
-        )
-
-        # Get response
-        response = chain.run(input_documents=docs, question=context_query)
+        # Get response from the chain
+        response = chain.run({"question": query})
 
         return response
 
@@ -64,12 +60,14 @@ def render_chat_interface(vector_store):
             st.markdown(message["content"])  # Use markdown for better formatting
 
     # Chat input
-    if prompt := st.chat_input("Ask a question about your documents..."):
+    if prompt := st.chat_input(
+        "Ask a question or start a conversation about your documents..."
+    ):
         # Add user message to conversation
         st.session_state.conversation.append({"role": "user", "content": prompt})
 
-        with st.spinner("Searching documents..."):
-            # Get response from vector store
+        with st.spinner("Generating response..."):
+            # Get conversational response
             response = query_vector_store(vector_store, prompt)
 
             if response:

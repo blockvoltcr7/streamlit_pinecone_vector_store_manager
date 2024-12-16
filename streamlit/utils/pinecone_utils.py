@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 from datetime import datetime
 from typing import Dict, List
@@ -26,6 +27,16 @@ def init_pinecone():
     return PineconeClient(api_key=api_key)
 
 
+def delete_index(index_name: str):
+    """Delete an entire index."""
+    try:
+        pc = init_pinecone()
+        pc.delete_index(index_name)
+        return True
+    except Exception as e:
+        raise Exception(f"Error deleting index: {str(e)}")
+
+
 def get_active_indexes():
     """Get list of active Pinecone indexes."""
     pc = init_pinecone()
@@ -50,6 +61,15 @@ def process_document(uploaded_file, metadata: Dict, namespace: str = ""):
             loader = PyPDFLoader(temp_path)
         elif file_extension == "md":
             loader = UnstructuredMarkdownLoader(temp_path)
+            # Enhance preprocessing for markdown
+            documents = loader.load()
+            for doc in documents:
+                # Example: Remove markdown headers
+                doc.page_content = re.sub(
+                    r"^#+\s", "", doc.page_content, flags=re.MULTILINE
+                )
+                # Example: Normalize whitespace
+                doc.page_content = re.sub(r"\s+", " ", doc.page_content).strip()
         elif file_extension == "txt":
             loader = TextLoader(temp_path)
         else:
@@ -69,7 +89,15 @@ def process_document(uploaded_file, metadata: Dict, namespace: str = ""):
                 }
             )
 
-        # Split documents
+        # Split documents into chunks with overlap
+        # chunk_size: Number of characters in each chunk
+        # chunk_overlap: Number of characters that overlap between chunks
+        # Example: With chunk_size=1000 and chunk_overlap=200:
+        #   Chunk 1: characters 0-1000
+        #   Chunk 2: characters 800-1800 (overlaps with end of Chunk 1)
+        #   Chunk 3: characters 1600-2600 (overlaps with end of Chunk 2)
+        # This overlap ensures that concepts/phrases that might be split between chunks
+        # are fully captured in at least one chunk, improving search quality
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
