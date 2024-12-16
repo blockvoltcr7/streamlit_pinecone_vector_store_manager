@@ -1,4 +1,4 @@
-import streamlit as st
+import pandas as pd
 from dotenv import load_dotenv
 from utils.pinecone_utils import (
     get_active_indexes,
@@ -7,19 +7,10 @@ from utils.pinecone_utils import (
     upload_to_pinecone,
 )
 
+import streamlit as st
+
 # Load environment variables
 load_dotenv()
-
-
-def reset_form():
-    """Reset form state."""
-    for key in list(st.session_state.keys()):
-        if key != "reset_counter":
-            del st.session_state[key]
-
-    if "reset_counter" not in st.session_state:
-        st.session_state.reset_counter = 0
-    st.session_state.reset_counter += 1
 
 
 def get_metadata():
@@ -28,13 +19,7 @@ def get_metadata():
 
     # Core metadata fields
     metadata["title"] = st.text_input("Document Title", key="title")
-    metadata["category"] = st.selectbox(
-        "Category",
-        ["services", "pricing", "materials", "faqs", "maintenance", "inspections"],
-        key="category",
-    )
     metadata["description"] = st.text_area("Description", key="description")
-
     # Tags and keywords
     tags = st.text_input("Tags (comma-separated)", key="tags")
     metadata["tags"] = [tag.strip() for tag in tags.split(",") if tag.strip()]
@@ -42,7 +27,7 @@ def get_metadata():
     # Author and date
     metadata["author"] = st.text_input("Author", key="author")
     metadata["date_created"] = st.date_input(
-        "Date Created", key="date_created"
+        "Date Created", key="date_created", value=pd.to_datetime("today").date()
     ).isoformat()
 
     return metadata
@@ -77,10 +62,6 @@ def upload_documents_page():
             st.write(f"**File Type:** {uploaded_file.type}")
         with col2:
             st.write(f"**File Size:** {uploaded_file.size / 1024:.2f} KB")
-            # Add reset button here for when a file is uploaded
-            if st.button("Clear Form", type="secondary"):
-                reset_form()
-                st.rerun()
 
         # Select index and namespace
         selected_index = st.selectbox("Select Index", indexes)
@@ -164,8 +145,9 @@ def upload_documents_page():
 
                             # Show upload another button
                             if st.button("Upload Another Document"):
-                                reset_form()
-                                st.rerun()
+                                st.session_state["form_reset"] = (
+                                    not st.session_state.get("form_reset", False)
+                                )  # Toggle state to trigger rerun
 
                     except Exception as e:
                         st.error(f"Error uploading document: {str(e)}")
